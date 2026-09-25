@@ -1,55 +1,77 @@
-## Project Title - Deploy a high-availability web app using CloudFormation
+# Highly Available Web Application on AWS
 
-This repo contains Cloud Formation Templates to deploy infrastructure shown below: a highly available web site on AWS
+A CloudFormation reference implementation for deploying a **highly available web application across multiple Availability Zones**.
 
-![image](https://user-images.githubusercontent.com/99427790/224475443-b62e377a-b33e-4f3b-8738-79654af6e2db.png)
+> **Focus:** AWS networking · CloudFormation · Auto Scaling · Load Balancing · IAM · private subnets
 
+## Architecture
 
-### Dependencies
-##### 1. AWS account
-You would require to have an AWS account to be able to build cloud infrastructure.
+![AWS highly available web application architecture](https://user-images.githubusercontent.com/99427790/224475443-b62e377a-b33e-4f3b-8738-79654af6e2db.png)
 
-##### 2. VS code editor
-An editor would be helpful to visualize the image as well as code. Download the VS Code editor [here](https://code.visualstudio.com/download).
+## Design
 
-##### 3. An account on www.lucidchart.com
-A free user-account on [www.lucidchart.com](www.lucidchart.com) is required to be able to draw the web app architecture diagrams for AWS.
+The application is designed around a public load-balancing tier and private application servers:
 
-## Project Requirements
-### Server specs
-	- You'll need to create a Launch Configuration for your application servers in order to deploy four servers, two located in each of your private subnets. The launch configuration will be used by an auto-scaling group.
-	- You'll need two vCPUs and at least 4GB of RAM. The Operating System to be used is Ubuntu 18. So, choose an Instance size and Machine Image (AMI) that best fits this spec.
-	- Be sure to allocate at least 10GB of disk space so that you don't run into issues. 
-	
-### Security Groups and Roles
-	- Since you will be downloading the application archive from an S3 Bucket, you'll need to create an IAM Role that allows your instances to use the S3 Service.(Optional)
-	- The App communicates on the default HTTP Port: 80, so your servers will need this inbound port open since you will use it with the Load Balancer and the Load Balancer Health Check. As for outbound, the servers will need unrestricted internet access to be able to download and update their software.
-	- The load balancer should allow all public traffic (0.0.0.0/0) on port 80 inbound, which is the default HTTP port. Outbound, it will only be using port 80 to reach the internal servers.
-	- The application needs to be deployed into private subnets with a Load Balancer located in a public subnet.
-	- One of the output exports of the CloudFormation script should be the public URL of the LoadBalancer.
+- Public subnets host the load balancer.
+- Private subnets host the application instances.
+- Multiple Availability Zones provide resilience against a single-AZ failure.
+- An Auto Scaling Group maintains the application fleet.
+- IAM roles provide controlled access to AWS services such as S3.
+- Security groups restrict traffic between the load balancer and application tier.
 
-### Other Considerations
-	- You can deploy your servers with an SSH Key into Public subnets while you are creating the script. This helps with troubleshooting. Once done, move them to your private subnets and remove the SSH Key from your Launch Configuration.
-	- It also helps to test directly, without the load balancer. Once you are confident that your server is behaving correctly, increase the instance count and add the load balancer to your script.
-	- While your instances are in public subnets, you'll also need the SSH port open (port 22) for your access, in case you need to troubleshoot your instances.
-	- Log information for UserData scripts is located in this file: cloud-init-output.log under the folder: /var/log.
-	- You should be able to destroy the entire infrastructure and build it back up without any manual steps required, other than running the CloudFormation scr
-	- 
-	- into your private subnet servers. This bastion host would be on a Public Subnet with port 22 open only to your home IP address, and it would need to have the private key that you use to access the other servers.
-	
-	
-	
-	
-### How to Create Stack
-To deploy any of the templates, use the command below upon successfully logging in to the aws cli
+## Infrastructure as Code
 
-```
-# Ensure that the AWS CLI is configured before runniing the command below
-# Create the network infrastructure
-# Check the region in the create.sh file
+AWS CloudFormation templates are used to create and update the environment without manually provisioning individual resources.
+
+The deployment scripts create the network stack first and then deploy the application/server stack.
+
+## Prerequisites
+
+- AWS account
+- AWS CLI configured with appropriate permissions
+- CloudFormation templates and parameter files in this repository
+
+## Deploy
+
+Review the region, AMI and key-pair values in the scripts/parameter files before deployment.
+
+```bash
+# Network infrastructure
 ./create.sh myFirstStack network.yml network-parameters.json
-# Create servers
-# Change the AMI ID and key-pair name in the servers.yml
-# Check the region in the update.sh file
+
+# Application/server infrastructure
 ./update.sh mySecStack servers.yml server-parameters.json
 ```
+
+Always inspect the CloudFormation change set/stack events before and after deployment.
+
+## Security notes
+
+The original design uses private subnets for application instances and a public load balancer. For a modern production implementation, additionally consider:
+
+- HTTPS/TLS with a managed certificate
+- Systems Manager Session Manager instead of direct SSH where possible
+- No broad `0.0.0.0/0` management access
+- IMDSv2 and hardened AMIs
+- Least-privilege IAM policies
+- Centralized logging and monitoring
+- Automated patching and vulnerability scanning
+
+## Engineering takeaway
+
+The project demonstrates how Infrastructure as Code can create a repeatable, resilient AWS application foundation while separating public ingress from private workloads.
+
+## Technologies
+
+**Cloud:** AWS  
+**IaC:** AWS CloudFormation  
+**Compute:** EC2 · Auto Scaling  
+**Networking:** VPC · Public/Private Subnets · Load Balancer  
+**Security:** IAM · Security Groups
+
+## Author
+
+**Vitalis Ibekwe**  
+Cloud · Platform · SRE · DevOps Engineer
+
+GitHub: https://github.com/VitalisCode
